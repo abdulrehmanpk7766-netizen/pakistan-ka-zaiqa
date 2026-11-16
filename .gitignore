@@ -3,3 +3,6 @@ secrets.toml
 __pycache__/
 *.pyc
 .venv/
+.env
+.env.local
+backup.sql
