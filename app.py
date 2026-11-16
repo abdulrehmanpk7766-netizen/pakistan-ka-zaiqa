@@ -20,6 +20,8 @@ from html import escape
 
 import pandas as pd
 import psycopg2
+from dotenv import load_dotenv
+load_dotenv(".env.local")
 import streamlit as st
 
 st.set_page_config(page_title="Pakistan Ka Zaiqa", page_icon="🍛", layout="centered")
@@ -159,16 +161,23 @@ def cfg(key, default):
     except Exception:
         return os.environ.get("PG" + key.upper(), default)
 
-
 def run_query(sql, params=None):
-    conn = psycopg2.connect(
-        host=cfg("host", "localhost"),
-        port=cfg("port", "5432"),
-        dbname=cfg("dbname", "food_guid_project"),
-        user=cfg("user", "postgres"),
-        password=str(cfg("password", "")),
-        sslmode=cfg("sslmode", "prefer"),  # online databases (Neon, Supabase) need "require"
-    )
+    url = os.environ.get("DATABASE_URL")
+    try:
+        url = url or st.secrets["DATABASE_URL"]
+    except Exception:
+        pass
+    if url:
+        conn = psycopg2.connect(url)  # Neon (sslmode=require url mein hota hai)
+    else:
+        conn = psycopg2.connect(
+            host=cfg("host", "localhost"),
+            port=cfg("port", "5432"),
+            dbname=cfg("dbname", "food_guid_project"),
+            user=cfg("user", "postgres"),
+            password=str(cfg("password", "")),
+            sslmode=cfg("sslmode", "prefer"),
+        )
     try:
         with conn.cursor() as cur:
             cur.execute(sql, params)
