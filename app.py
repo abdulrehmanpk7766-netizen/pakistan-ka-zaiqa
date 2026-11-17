@@ -230,6 +230,16 @@ WHERE  d.dish_id = %s AND c.name = %s
 ORDER  BY o.name
 """
 
+# Hint query: in which cities does a meal type (for example dessert) exist in our data?
+MEAL_CITIES_SQL = """
+SELECT c.name AS city, d.name AS dish
+FROM   city_dish cd
+JOIN   city c ON c.city_id = cd.city_id
+JOIN   dish d ON d.dish_id = cd.dish_id
+WHERE  d.meal_type = %s
+ORDER  BY c.name, d.name
+"""
+
 SPICE_LABELS = {
     "Any": "Any spice level 😋",
     "mild": "Mild 😌",
@@ -260,7 +270,7 @@ st.markdown(
 )
 if HERO_PHOTO:
     st.markdown(f'<img class="hero-photo" src="{HERO_PHOTO}" alt="Pakistani food">', unsafe_allow_html=True)
-st.markdown('<div class="bunting">🎉🌶️🍢🫓🍛🥘🍢🌶️🎉</div>', unsafe_allow_html=True)
+st.markdown('<div class="bunting">🎉🌶️🍢🥙🍛🥘🍢🌶️🎉</div>', unsafe_allow_html=True)
 
 try:
     cities = q(CITIES_SQL)["name"].tolist()
@@ -298,7 +308,13 @@ if st.session_state.page == "search":
 
         st.markdown(f'<div class="section-title">Top dishes in <span>{escape(s_city)}</span></div>', unsafe_allow_html=True)
         if dishes.empty:
-            st.info("No dish matches these choices. Try 'Any' for meal type or spice level.")
+            message = "No dish matches these choices. Try 'Any' for meal type or spice level."
+            if meal_filter:
+                elsewhere = q(MEAL_CITIES_SQL, (meal_filter,))
+                if not elsewhere.empty:
+                    places = ", ".join(f"{r.city} ({r.dish})" for r in elsewhere.itertuples())
+                    message += f" {s_meal.title()} dishes in our data: {places}."
+            st.info(message)
         for position, (_, row) in enumerate(dishes.iterrows(), start=1):
             with st.container(border=True):
                 kind = '<span class="badge b-veg">🥬 Veg</span>' if row["is_veg"] else '<span class="badge b-nonveg">🍖 Non-veg</span>'
@@ -364,7 +380,8 @@ else:
     if outlets.empty:
         st.info(
             "No outlet in our data has this dish in its name. "
-            "We match outlets to dishes by the dish name inside the outlet name."
+            "We match outlets to dishes by the dish name inside the outlet name. "
+            "Try Nihari, Siri paya, Haleem, Chapli kabab, Balochi sajji or Bun kebab."
         )
     else:
         st.markdown(f'<div class="stat">🎯 {len(outlets)} outlets serve this dish</div>', unsafe_allow_html=True)
@@ -375,4 +392,4 @@ else:
         st.dataframe(outlets[["Outlet", "Address"]], hide_index=True, width="stretch")
 
 # ---------------------------------------------------------------- footer
-st.markdown('<div class="stripe"></div><div class="foodstrip">🍢 🫓 🍛 🥘 🍗 🍚 🫖</div>', unsafe_allow_html=True)
+st.markdown('<div class="stripe"></div><div class="foodstrip">🍢 🥙 🍛 🥘 🍗 🍚 ☕</div>', unsafe_allow_html=True)
